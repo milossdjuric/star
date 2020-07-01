@@ -6,5 +6,6 @@ type Fn func(event []byte)
 
 type Syncer interface {
 	Subscribe(topic string, f Fn)
+	Alter() error
 	Error(topic string, data []byte)
 }

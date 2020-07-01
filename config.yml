@@ -1,15 +1,30 @@
 star:
   version: v1
   nodeid: topology.regions.novisad.grbavica.node3
-  rtopic: topology.regions.novisad.grbavica.node3.> 
+  rtopic: topology.regions.novisad.grbavica.node3.>
+  name: noname
   stopic: syncTopic
   errtopic: erroTtopic
   flusher: 0.0.0.0:4222
+  retention: 24h
+  healthcheck:
+    address: 0.0.0.0:4222
+    topic: health
+    interval: 1m
   instrument:
     address: 0.0.0.0:4222
     stopic: collector
     collect: 15s
     location: logs/
+  labels: #when configuring node, add any kv pair as default labels when node call system
+    os: linux
+    disk: flash
+    arch: arm
+    model: rpi
+    memory: 4GB
+    storage: 120GB
+    cpu: 1
+    cores: 4
 
 
   #topology.regions.>

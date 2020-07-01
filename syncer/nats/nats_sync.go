@@ -7,6 +7,7 @@ import (
 
 type NatsSync struct {
 	natsConnection *nats.Conn
+	sub            *nats.Subscription
 }
 
 func NewNatsSync(address string) (*NatsSync, error) {
@@ -21,9 +22,19 @@ func NewNatsSync(address string) (*NatsSync, error) {
 }
 
 func (n *NatsSync) Subscribe(topic string, f syncer.Fn) {
-	n.natsConnection.Subscribe(topic, func(msg *nats.Msg) {
+	sub, _ := n.natsConnection.Subscribe(topic, func(msg *nats.Msg) {
 		f(msg.Data)
 	})
+	n.sub = sub
+}
+
+func (n *NatsSync) Alter() error {
+	err := n.sub.Unsubscribe()
+	if err != nil {
+		return err
+	}
+	n.sub = nil
+	return nil
 }
 
 func (n *NatsSync) Error(topic string, data []byte) {
