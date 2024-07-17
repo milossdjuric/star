@@ -7,4 +7,5 @@ type NodeId struct {
 type NodeIdStore interface {
 	Get() (*NodeId, error)
 	Put(nodeId NodeId) error
+	PutClusterId(clusterId string) error
 }

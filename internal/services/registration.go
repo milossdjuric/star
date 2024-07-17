@@ -22,8 +22,8 @@ func NewRegistrationService(client *magnetarapi.RegistrationAsyncClient, nodeIdR
 	}
 }
 
-func (rs *RegistrationService) Register(maxRetries int8) error {
-	req := rs.buildReq()
+func (rs *RegistrationService) Register(maxRetries int8, bindAddress string) error {
+	req := rs.buildReq(bindAddress)
 	for attemptsLeft := maxRetries; attemptsLeft > 0; attemptsLeft-- {
 		errChan := make(chan error)
 		err := rs.tryRegister(req, errChan)
@@ -45,7 +45,7 @@ func (rs *RegistrationService) tryRegister(req *magnetarapi.RegistrationReq, err
 	return err
 }
 
-func (rs *RegistrationService) buildReq() *magnetarapi.RegistrationReq {
+func (rs *RegistrationService) buildReq(bindAddress string) *magnetarapi.RegistrationReq {
 	builder := magnetarapi.NewRegistrationReqBuilder()
 	cpuCores, err := cpuCores()
 	if err == nil {
@@ -105,7 +105,12 @@ func (rs *RegistrationService) buildReq() *magnetarapi.RegistrationReq {
 	if err == nil {
 		builder = builder.AddFloat64Label("memory-totalGB", memoryTotalGB)
 	}
-	return builder.Request()
+	req := builder.Request()
+	req.Resources["mem"] = memoryTotalGB
+	req.Resources["cpu"] = cpuCores
+	req.Resources["disk"] = diskFreeGB
+	req.BindAddress = bindAddress
+	return req
 }
 
 func (rs *RegistrationService) Registered() bool {
