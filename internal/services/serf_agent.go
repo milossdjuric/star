@@ -248,6 +248,9 @@ func handleUser(ev serf.Event, s *SerfAgent) {
 				log.Println(putErr)
 			}
 		}
+		if strings.HasPrefix(ue.Name, "app_config") {
+			log.Println(payload)
+		}
 		// tag := ue.Name
 		// intended, err := s.checkTags(tag)
 		// if err != nil {

@@ -8,6 +8,7 @@ require (
 	github.com/hashicorp/serf v0.10.1
 	github.com/nats-io/nats.go v1.31.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
+	github.com/c12s/meridian v1.0.0
 )
 
 require (
@@ -48,3 +49,5 @@ replace github.com/c12s/magnetar => ../magnetar
 replace github.com/c12s/kuiper => ../kuiper
 
 replace github.com/c12s/oort => ../oort
+
+replace github.com/c12s/meridian => ../meridian

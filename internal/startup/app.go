@@ -7,6 +7,7 @@ import (
 
 	kuiperapi "github.com/c12s/kuiper/pkg/api"
 	magnetarapi "github.com/c12s/magnetar/pkg/api"
+	meridianapi "github.com/c12s/meridian/pkg/api"
 	"github.com/c12s/star/internal/configs"
 	"github.com/c12s/star/internal/servers"
 	"github.com/c12s/star/internal/services"
@@ -17,12 +18,13 @@ import (
 )
 
 type app struct {
-	config              *configs.Config
-	grpcServer          *grpc.Server
-	configAsyncServer   *servers.ConfigAsyncServer
-	shutdownProcesses   []func()
-	serfAgent           *services.SerfAgent
-	clusterJoinListener *services.ClusterJoinListener
+	config               *configs.Config
+	grpcServer           *grpc.Server
+	configAsyncServer    *servers.ConfigAsyncServer
+	appConfigAsyncServer *servers.AppConfigAsyncServer
+	shutdownProcesses    []func()
+	serfAgent            *services.SerfAgent
+	clusterJoinListener  *services.ClusterJoinListener
 }
 
 func NewAppWithConfig(config *configs.Config) (*app, error) {
@@ -92,6 +94,16 @@ func (a *app) init() {
 	}
 	a.configAsyncServer = configAsyncServer
 
+	meridianClient, err := meridianapi.NewMeridianAsyncClient(a.config.NatsAddress(), nodeId.Value)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	appConfigAsyncServer, err := servers.NewAppConfigAsyncServer(meridianClient, agent, nodeId.Value)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	a.appConfigAsyncServer = appConfigAsyncServer
+
 	configGrpcServer, err := servers.NewStarConfigServer(configStore)
 	if err != nil {
 		log.Fatalln(err)
@@ -119,6 +131,7 @@ func (a *app) startSerfAgent() error {
 
 func (a *app) startConfigAsyncServer() error {
 	a.configAsyncServer.Serve()
+	a.appConfigAsyncServer.Serve()
 	return nil
 }
 
