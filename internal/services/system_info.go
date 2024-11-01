@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
@@ -62,6 +63,8 @@ func fsType() (string, error) {
 	diskInfo, err := disk.Usage("/")
 	if err != nil {
 		return "", err
+	} else if diskInfo.Fstype == "" {
+		return "", errors.New("fs-type undefined")
 	}
 	return diskInfo.Fstype, nil
 }
