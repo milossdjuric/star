@@ -30,5 +30,8 @@ WORKDIR /root/
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/main .
 
-# Command to run the executable
-CMD ["./main"]
+# # Command to run the executable
+# CMD ["./main"]
+
+# Command to run docker daemon and run the executable
+CMD ["sh", "-c", "dockerd & ./main"]
