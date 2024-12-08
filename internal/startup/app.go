@@ -50,9 +50,7 @@ func (a *app) init() {
 		natsConn.Close()
 	})
 
-	log.Printf("before docker client")
 	dockerClient, err := client.NewClientWithOpts(client.WithHost(a.config.DockerClientAddress()), client.WithAPIVersionNegotiation())
-	// log.Printf("Connecting to docker: ", dockerClient.DaemonHost())
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -83,7 +81,6 @@ func (a *app) init() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println("NODE ID: " + nodeId.Value)
 
 	configStore, err := store.NewConfigInMemStore()
 	if err != nil {
@@ -118,7 +115,7 @@ func (a *app) init() {
 	}
 	a.appConfigAsyncServer = appConfigAsyncServer
 
-	log.Println("NODE ID:", nodeId.Value)
+	// rus client - rolling update service
 	rusClient, err := rusapi.NewUpdateServiceAsyncClient(a.config.NatsAddress(), nodeId.Value)
 	if err != nil {
 		log.Fatalln(err)
@@ -134,14 +131,8 @@ func (a *app) init() {
 		log.Fatalln(err)
 	}
 
-	// appGrpcServer, err := servers.NewStarAppContainerServer(dockerClient)
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-
 	s := grpc.NewServer()
 	api.RegisterStarConfigServer(s, configGrpcServer)
-	// api.RegisterStarAppServer(s, appGrpcServer)
 	reflection.Register(s)
 	a.grpcServer = s
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -66,58 +67,42 @@ func (c *AppOperationAsyncServer) GracefulStop() {
 
 func (c *AppOperationAsyncServer) handleStartApp(ctx context.Context, name string, selectorLabels map[string]string) error {
 
-	// Initialize error messages array
 	errorMessages := make([]string, 0)
 
-	// Log Docker client image environment variable
-	log.Println("DOCKER_CLIENT_IMAGE: ", os.Getenv("DOCKER_CLIENT_IMAGE"))
-
-	// Prepare container configuration
 	containerConfig := &container.Config{
 		Image:  os.Getenv("DOCKER_CLIENT_IMAGE"),
 		Cmd:    []string{"ash", "-c", "while true; do sleep 1000; done"},
 		Labels: selectorLabels,
 	}
 
-	log.Println("Container config prepared: ", containerConfig)
-
-	// Create the container
 	resp, err := c.dockerClient.ContainerCreate(ctx, containerConfig, nil, nil, nil, name)
 	if err != nil {
 		errorMessages = append(errorMessages, fmt.Sprintf("Error creating container: %s", err))
 		log.Println("Error creating container: ", err)
 	} else {
-		log.Println("Container created successfully: ", resp.ID)
+		// log.Println("Container created successfully: ", resp.ID)
 	}
 
-	// Start the container
 	if err := c.dockerClient.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 		log.Printf("Error starting container: %s", err)
 		errorMessages = append(errorMessages, fmt.Sprintf("Error starting container: %s", err))
 	} else {
-		log.Println("Container started successfully: ", resp.ID)
+		// log.Println("Container started successfully: ", resp.ID)
 	}
 
-	// Prepare the response
 	response := rusapi.StartAppResp{
 		Success:       err == nil,
 		ErrorMessages: errorMessages,
 	}
 
-	log.Println("Prepared response: Success=", response.Success, ", ErrorMessages=", response.ErrorMessages)
-
-	// Marshal the response
 	data, err := proto.Marshal(&response)
 	if err != nil {
 		log.Printf("Failed to marshal response: %v", err)
 		return err
 	}
-	log.Println("Response marshaled successfully")
 
-	// Publish the response to the NATS topic
-	log.Println("Publishing response to NATS topic: ", c.nodeId+".app_operation.start_app")
 	c.client.Publisher.Publish(data, c.nodeId+".app_operation.start_app."+name)
-	log.Println("Response published successfully")
+	log.Println("Response published to NATS topic: ", c.nodeId+".app_operation.start_app")
 
 	return err
 }
@@ -127,21 +112,30 @@ func (c *AppOperationAsyncServer) handleStopApp(ctx context.Context, name string
 	errorMessages := make([]string, 0)
 	err := c.dockerClient.ContainerStop(ctx, name, container.StopOptions{})
 	if err != nil {
+		log.Printf("Error stopping container: %s", err)
 		errorMessages = append(errorMessages, fmt.Sprintf("Error stopping container: %s", err))
+	} else {
+		// log.Printf("Container %s stopped successfully", name)
 	}
+
 	response := rusapi.StopAppResp{
 		Success:       err == nil,
 		ErrorMessages: errorMessages,
 	}
+
 	data, err := proto.Marshal(&response)
 	if err != nil {
 		log.Printf("Failed to marshal response: %v", err)
 	}
+
 	c.client.Publisher.Publish(data, c.nodeId+".app_operation.stop_app."+name)
+	log.Println("Response published to NATS topic: ", c.nodeId+".app_operation.stop_app")
+
 	return err
 }
 
 func (c *AppOperationAsyncServer) handleQueryApp(ctx context.Context, prefix string, selectorLabels map[string]string) error {
+	// log.Printf("Querying app containers with prefix: %s and selectorLabels: %v", prefix, selectorLabels)
 
 	errorMessages := make([]string, 0)
 	keyValues := make([]filters.KeyValuePair, 0)
@@ -156,27 +150,39 @@ func (c *AppOperationAsyncServer) handleQueryApp(ctx context.Context, prefix str
 	if err != nil {
 		log.Printf("Failed to list containers: %v", err)
 		errorMessages = append(errorMessages, fmt.Sprintf("Failed to list containers: %v", err))
+	} else {
+		// log.Printf("Found %d containers matching query", len(containers))
 	}
 
 	apps := make([]*rusapi.App, 0)
 	for _, container := range containers {
-		apps = append(apps, &rusapi.App{Name: container.Names[0], SelectorLabels: container.Labels})
-		log.Printf("App: %s", apps[len(apps)-1].Name)
+		log.Printf("Container found: %v", container)
+		beforeContainerName, containerName, _ := strings.Cut(container.Names[0], "/")
+		if containerName == "" {
+			containerName = beforeContainerName
+		}
+		apps = append(apps, &rusapi.App{Name: containerName, SelectorLabels: container.Labels})
+		log.Printf("App found: %s", apps[len(apps)-1].Name)
 	}
+
 	response := rusapi.QueryAppResp{
 		Success:       err == nil,
 		ErrorMessages: errorMessages,
 		Apps:          apps,
 	}
+
 	data, err := proto.Marshal(&response)
 	if err != nil {
 		log.Printf("Failed to marshal response: %v", err)
 	}
-	c.client.Publisher.Publish(data, c.nodeId+".app_operation.query_app")
+	c.client.Publisher.Publish(data, c.nodeId+".app_operation.query_app."+prefix)
+	log.Println("Response published to NATS topic: ", c.nodeId+".app_operation.query_app")
+
 	return err
 }
 
 func (c *AppOperationAsyncServer) handleHealthCheckApp(ctx context.Context, name string) error {
+	// log.Printf("Health check for container: %s", name)
 
 	errorMessages := make([]string, 0)
 	healthy := false
@@ -184,12 +190,13 @@ func (c *AppOperationAsyncServer) handleHealthCheckApp(ctx context.Context, name
 	if err != nil {
 		log.Printf("Failed to inspect container: %v", err)
 		errorMessages = append(errorMessages, fmt.Sprintf("Failed to inspect container: %v", err))
-	}
-	if containerInfo.State.Running {
-		healthy = true
-		log.Printf("Container %s is running", name)
 	} else {
-		log.Printf("Container %s is not running", name)
+		if containerInfo.State.Running {
+			healthy = true
+			log.Printf("Container %s is running", name)
+		} else {
+			log.Printf("Container %s is not running", name)
+		}
 	}
 
 	response := rusapi.HealthCheckAppResp{
@@ -197,15 +204,19 @@ func (c *AppOperationAsyncServer) handleHealthCheckApp(ctx context.Context, name
 		ErrorMessages: errorMessages,
 		Healthy:       healthy,
 	}
+
 	data, err := proto.Marshal(&response)
 	if err != nil {
 		log.Printf("Failed to marshal response: %v", err)
 	}
-	c.client.Publisher.Publish(data, c.nodeId+".app_operation.healthcheck_app")
+	c.client.Publisher.Publish(data, c.nodeId+".app_operation.healthcheck_app."+name)
+	log.Println("Response published to NATS topic: ", c.nodeId+".app_operation.healthcheck_app")
+
 	return err
 }
 
 func (c *AppOperationAsyncServer) handleAvailabilityCheckApp(ctx context.Context, name string, minReadySeconds int64) error {
+	// log.Printf("Availability check for container: %s with minReadySeconds: %d", name, minReadySeconds)
 
 	errorMessages := make([]string, 0)
 	available := false
@@ -213,19 +224,21 @@ func (c *AppOperationAsyncServer) handleAvailabilityCheckApp(ctx context.Context
 	if err != nil {
 		log.Printf("Failed to inspect container: %v", err)
 		errorMessages = append(errorMessages, fmt.Sprintf("Failed to inspect container: %v", err))
-	}
-	if containerInfo.State.Running {
-		startedAt := containerInfo.State.StartedAt
-		startTime, err := time.Parse(time.RFC3339Nano, startedAt)
-		if err != nil {
-			log.Printf("Failed to parse time: %v", err)
-			errorMessages = append(errorMessages, fmt.Sprintf("Failed to parse time: %v", err))
-		}
-		if time.Since(startTime).Seconds() >= float64(minReadySeconds) {
-			log.Printf("Container %s is available", name)
-			available = true
-		} else {
-			log.Printf("Container %s is not available", name)
+	} else {
+		if containerInfo.State.Running {
+			startedAt := containerInfo.State.StartedAt
+			startTime, err := time.Parse(time.RFC3339Nano, startedAt)
+			if err != nil {
+				log.Printf("Failed to parse time: %v", err)
+				errorMessages = append(errorMessages, fmt.Sprintf("Failed to parse time: %v", err))
+			} else {
+				if time.Since(startTime).Seconds() >= float64(minReadySeconds) {
+					available = true
+					log.Printf("Container %s is available", name)
+				} else {
+					log.Printf("Container %s is not available", name)
+				}
+			}
 		}
 	}
 
@@ -234,10 +247,13 @@ func (c *AppOperationAsyncServer) handleAvailabilityCheckApp(ctx context.Context
 		ErrorMessages: errorMessages,
 		Available:     available,
 	}
+
 	data, err := proto.Marshal(&response)
 	if err != nil {
 		log.Printf("Failed to marshal response: %v", err)
 	}
-	c.client.Publisher.Publish(data, c.nodeId+".app_operation.availabilitycheck_app")
+	c.client.Publisher.Publish(data, c.nodeId+".app_operation.availabilitycheck_app."+name)
+	log.Println("Response published to NATS topic: ", c.nodeId+".app_operation.availabilitycheck_app")
+
 	return err
 }
