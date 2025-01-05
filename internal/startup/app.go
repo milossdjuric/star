@@ -13,18 +13,21 @@ import (
 	"github.com/c12s/star/internal/services"
 	"github.com/c12s/star/internal/store"
 	"github.com/c12s/star/pkg/api"
+	"github.com/docker/docker/client"
+	rusapi "github.com/milossdjuric/rolling_update_service/pkg/api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 type app struct {
-	config               *configs.Config
-	grpcServer           *grpc.Server
-	configAsyncServer    *servers.ConfigAsyncServer
-	appConfigAsyncServer *servers.AppConfigAsyncServer
-	shutdownProcesses    []func()
-	serfAgent            *services.SerfAgent
-	clusterJoinListener  *services.ClusterJoinListener
+	config                  *configs.Config
+	grpcServer              *grpc.Server
+	configAsyncServer       *servers.ConfigAsyncServer
+	appConfigAsyncServer    *servers.AppConfigAsyncServer
+	shutdownProcesses       []func()
+	serfAgent               *services.SerfAgent
+	clusterJoinListener     *services.ClusterJoinListener
+	appOperationAsyncServer *servers.AppOperationAsyncServer
 }
 
 func NewAppWithConfig(config *configs.Config) (*app, error) {
@@ -45,6 +48,15 @@ func (a *app) init() {
 	a.shutdownProcesses = append(a.shutdownProcesses, func() {
 		log.Println("closing nats conn")
 		natsConn.Close()
+	})
+
+	dockerClient, err := client.NewClientWithOpts(client.WithHost(a.config.DockerClientAddress()), client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatalln(err)
+	}
+	a.shutdownProcesses = append(a.shutdownProcesses, func() {
+		log.Println("closing docker client")
+		dockerClient.Close()
 	})
 
 	nodeIdStore, err := store.NewNodeIdFSStore(a.config.NodeIdDirPath(), a.config.NodeIdFileName())
@@ -69,7 +81,6 @@ func (a *app) init() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println("NODE ID: " + nodeId.Value)
 
 	configStore, err := store.NewConfigInMemStore()
 	if err != nil {
@@ -104,6 +115,17 @@ func (a *app) init() {
 	}
 	a.appConfigAsyncServer = appConfigAsyncServer
 
+	// rus client - rolling update service
+	rusClient, err := rusapi.NewUpdateServiceAsyncClient(a.config.NatsAddress(), nodeId.Value)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	appOperationAsyncServer, err := servers.NewAppOperationAsyncServer(rusClient, dockerClient, nodeId.Value)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	a.appOperationAsyncServer = appOperationAsyncServer
+
 	configGrpcServer, err := servers.NewStarConfigServer(configStore)
 	if err != nil {
 		log.Fatalln(err)
@@ -132,6 +154,7 @@ func (a *app) startSerfAgent() error {
 func (a *app) startConfigAsyncServer() error {
 	a.configAsyncServer.Serve()
 	a.appConfigAsyncServer.Serve()
+	a.appOperationAsyncServer.Serve()
 	return nil
 }
 

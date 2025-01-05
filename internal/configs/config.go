@@ -15,10 +15,15 @@ type Config struct {
 	grpcServerAddress                  string
 	serfBindAddress                    string
 	serfBindPort                       int
+	dockerClientAddress                string
 }
 
 func (c *Config) NatsAddress() string {
 	return c.natsAddress
+}
+
+func (c *Config) DockerClientAddress() string {
+	return c.dockerClientAddress
 }
 
 func (c *Config) RegistrationReqTimeoutMilliseconds() int64 {
@@ -74,5 +79,6 @@ func NewFromEnv() (*Config, error) {
 		grpcServerAddress:                  os.Getenv("STAR_ADDRESS"),
 		serfBindAddress:                    os.Getenv("BIND_ADDRESS"),
 		serfBindPort:                       serfBindPort,
+		dockerClientAddress:                os.Getenv("DOCKER_CLIENT_ADDRESS"),
 	}, nil
 }
