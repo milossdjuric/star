@@ -86,6 +86,8 @@ github.com/milossdjuric/rolling_update_service v0.0.0-20241114185848-58a6fdde7fc
 github.com/milossdjuric/rolling_update_service v0.0.0-20241114185848-58a6fdde7fcd/go.mod h1:8rWSran5MC7upVIRaOpEFm3PbgX30J/qRGFZNUf9Dac=
 github.com/milossdjuric/rolling_update_service v0.0.0-20241122193703-81002996dcef h1:3n5qqqALPVTB6eGcct8mct9VylRUEVEPp7j8nV/sSfU=
 github.com/milossdjuric/rolling_update_service v0.0.0-20241122193703-81002996dcef/go.mod h1:ka3fifmq+a+pYuQzPmcKtpIYl2smpXH5k0doyWP2bi4=
+github.com/milossdjuric/rolling_update_service v0.0.0-20241215194901-8578f00b7ce8 h1:SWwb35Gb1GHlRkbFUSqJxSfsbxTU1FyQHzElrOQSUZQ=
+github.com/milossdjuric/rolling_update_service v0.0.0-20241215194901-8578f00b7ce8/go.mod h1:ka3fifmq+a+pYuQzPmcKtpIYl2smpXH5k0doyWP2bi4=
 github.com/mitchellh/cli v1.1.0/go.mod h1:xcISNoH86gajksDmfB23e/pu+B+GeFRMYmoHXxx3xhI=
 github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/moby/docker-image-spec v1.3.1 h1:jMKff3w6PgbfSa69GfNg+zN/XLhfXJGnEx3Nl2EsFP0=

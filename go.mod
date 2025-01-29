@@ -31,7 +31,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/hashicorp/memberlist v0.5.0 // indirect
 	github.com/miekg/dns v1.1.41 // indirect
-	github.com/milossdjuric/rolling_update_service v0.0.0-20241122193703-81002996dcef // indirect
+	github.com/milossdjuric/rolling_update_service v0.0.0-20241215194901-8578f00b7ce8 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
