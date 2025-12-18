@@ -12,7 +12,7 @@ COPY ./magnetar ../magnetar
 COPY ./kuiper ../kuiper
 COPY ./oort ../oort
 COPY ./meridian ../meridian
-# COPY ./rolling_update_service ../rolling_update_service
+COPY ./rolling_update_service ../rolling_update_service
 
 # Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
